@@ -71,4 +71,20 @@ tsconfig*.tsbuildinfo
 
 # Cookies
 *cookies.txt
-temp_cookies.txt 
+temp_cookies.txt
+
+# Large files
+*.zip
+*.gz
+*.tar
+*.7z
+*.rar
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.png
+*.jpg
+*.jpeg
+generated-icon.png
+logo.png 
