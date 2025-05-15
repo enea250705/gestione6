@@ -6,7 +6,9 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:3001/api/:path*',
+        destination: process.env.NODE_ENV === 'production'
+          ? 'https://workforce-manager-api.onrender.com/api/:path*' 
+          : 'http://localhost:3001/api/:path*',
       },
     ]
   },
@@ -24,7 +26,12 @@ const nextConfig = {
   },
   experimental: {
     esmExternals: 'loose'
-  }
+  },
+  env: {
+    API_URL: process.env.NODE_ENV === 'production' 
+      ? process.env.API_URL || 'https://workforce-manager-api.onrender.com' 
+      : 'http://localhost:5000',
+  },
 };
 
 module.exports = nextConfig; 
