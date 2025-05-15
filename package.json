@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "tsx server/index.ts",
-    "install-client": "cd client && npm install",
+    "install-client": "cd client && npm install --legacy-peer-deps",
     "build-client-only": "cd client && npm run build",
     "build-server": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "copy-client": "mkdir -p dist/public && cp -r client/dist/* dist/public/",
