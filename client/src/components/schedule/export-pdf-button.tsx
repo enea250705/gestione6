@@ -77,7 +77,7 @@ export function ExportPdfButton({ schedule, shifts, employees, className }: Expo
     // Verifico se i dipendenti hanno corrispondenza con i turni
     const employeeIds = new Set(employees.map(e => e.id));
     const shiftEmployeeIds = new Set(shifts.map(s => s.employeeId || s.userId));
-    const matchingIds = [...shiftEmployeeIds].filter(id => employeeIds.has(id as number));
+    const matchingIds = Array.from(shiftEmployeeIds).filter(id => id !== undefined && employeeIds.has(id as number));
     
     // Verifico i turni per giorno
     const startDate = new Date(schedule.startDate);

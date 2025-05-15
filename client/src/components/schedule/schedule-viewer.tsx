@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
-import { formatDate, formatHours, calculateTotalWorkHours, calculateWorkHours } from "@/lib/utils";
+import { formatDate, formatHours, calculateTotalWorkHours } from "@/lib/utils";
 
 type ScheduleViewerProps = {
   schedule: any;

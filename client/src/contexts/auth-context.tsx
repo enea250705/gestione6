@@ -1,75 +1,60 @@
-import { createContext, useState, useEffect, ReactNode } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+"use client"
+
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 interface User {
   id: number;
-  username: string;
   name: string;
   email: string;
   role: string;
-  isActive: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  error: Error | null;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
-  login: async () => {},
-  logout: async () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const queryClient = useQueryClient();
-
-  // Check if user is already logged in
+  
+  // Fetch current user
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["/api/auth/me"],
+    retry: false,
+  });
+  
   useEffect(() => {
-    async function checkAuth() {
-      try {
-        const response = await fetch("/api/auth/me", {
-          credentials: "include",
-        });
-        const data = await response.json();
-        
-        if (data.user) {
-          setUser(data.user);
-        }
-      } catch (error) {
-        console.error("Failed to check authentication:", error);
-      } finally {
-        setIsLoading(false);
-      }
+    if (data) {
+      setUser(data as User);
     }
-
-    checkAuth();
-  }, []);
+  }, [data]);
 
   // Login function
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     try {
-      const response = await apiRequest("POST", "/api/auth/login", { username, password });
-      const data = await response.json();
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+      });
       
-      if (data.user) {
-        setUser(data.user);
-        return;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Login failed");
       }
       
-      throw new Error("Login failed");
+      const userData = await response.json();
+      setUser(userData);
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -79,23 +64,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Logout function
   const logout = async () => {
     try {
-      await apiRequest("POST", "/api/auth/logout", {});
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
       setUser(null);
-      
-      // Clear all queries from the cache on logout
-      queryClient.clear();
     } catch (error) {
       console.error("Logout error:", error);
+      throw error;
     }
   };
 
-  const value = {
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    login,
-    logout,
-  };
+  return (
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoading, 
+      error, 
+      login, 
+      logout, 
+      isAuthenticated: !!user 
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }

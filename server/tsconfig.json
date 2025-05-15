@@ -6,8 +6,6 @@
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "strict": true,
-    "noImplicitAny": false,
-    "strictFunctionTypes": false,
     "outDir": "../dist",
     "skipLibCheck": true,
     "types": ["node", "express"]

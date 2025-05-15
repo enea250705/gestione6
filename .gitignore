@@ -1,7 +1,7 @@
-# Dependency directories
+# Dependencies
 node_modules/
-dist/
-build/
+/.pnp
+.pnp.js
 
 # Environment variables
 .env
@@ -10,6 +10,15 @@ build/
 .env.test.local
 .env.production.local
 
+# Build outputs
+/dist/
+/build/
+/out/
+/.next/
+client/.next/
+client/build/
+client/dist/
+
 # Logs
 logs
 *.log
@@ -17,7 +26,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Editor directories and files
+# Testing
+/coverage
+
+# Debug
+.DS_Store
 .idea/
 .vscode/
 *.suo
@@ -26,19 +39,6 @@ yarn-error.log*
 *.sln
 *.sw?
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Temp files
-temp_cookies.txt
-cookies.txt
-employee_cookies.txt
-
-# Vercel
-.vercel/ 
+# Misc
+.vercel
+.turbo 

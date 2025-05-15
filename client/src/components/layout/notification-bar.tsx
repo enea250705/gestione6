@@ -28,7 +28,8 @@ type Notification = {
 export function NotificationBar() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
   

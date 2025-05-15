@@ -30,10 +30,12 @@ const formSchema = z.object({
 });
 
 export default function Login() {
-  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { login, isLoading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
 
   // Se l'utente è già autenticato, reindirizza alla dashboard
   useEffect(() => {
@@ -97,9 +99,9 @@ export default function Login() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-2">
-            <img src="/logo.png" alt="Logo" className="h-12 w-auto" />
+            <span className="material-icons text-4xl text-primary">schedule</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 font-condensed">Da Vittorino Gestione</h1>
+          <h1 className="text-2xl font-bold text-gray-900 font-condensed">StaffSync</h1>
           <p className="mt-2 text-sm text-gray-600">
             Sistema di Gestione Personale
           </p>
@@ -181,6 +183,8 @@ export default function Login() {
         <div className="text-center text-sm text-gray-500">
           <p>
             Utilizzare le credenziali fornite dal tuo amministratore.
+            <br />
+            Per test: username <span className="font-medium">admin</span> / password <span className="font-medium">admin123</span>
           </p>
         </div>
       </div>

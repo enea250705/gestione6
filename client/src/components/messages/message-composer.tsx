@@ -31,7 +31,7 @@ import {
   CardFooter 
 } from "@/components/ui/card";
 import { Send, ArrowLeft } from "lucide-react";
-import { User } from "@shared/schema";
+import { User } from "@/types/schema";
 
 // Form schema for message composition
 const formSchema = z.object({

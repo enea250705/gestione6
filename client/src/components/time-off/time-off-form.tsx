@@ -103,7 +103,7 @@ export function TimeOffRequestForm() {
     },
     onSuccess: (response) => {
       // Aggiorna le informazioni di debug con la risposta
-      setDebugInfo(prev => ({
+      setDebugInfo((prev: any) => ({
         ...prev,
         response: response,
         success: true,
@@ -122,7 +122,7 @@ export function TimeOffRequestForm() {
     },
     onError: (error) => {
       // Aggiorna le informazioni di debug con l'errore
-      setDebugInfo(prev => ({
+      setDebugInfo((prev: any) => ({
         ...prev,
         error: error,
         success: false,

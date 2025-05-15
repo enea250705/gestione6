@@ -41,7 +41,6 @@ const timeOffSchema = z.object({
   reason: z.string().optional(),
 });
 
-// Define TimeOffRequest as a type interface
 interface TimeOffRequest {
   id: number;
   userId: number;
@@ -61,7 +60,7 @@ export function TimeOffRequest() {
   const { user } = useAuth();
   
   // Fetch user's time off requests
-  const { data: timeOffRequests = [], isLoading } = useQuery({
+  const { data: timeOffRequests = [], isLoading } = useQuery<TimeOffRequest[]>({
     queryKey: ["/api/time-off-requests"],
   });
   
@@ -330,7 +329,7 @@ export function TimeOffList() {
           </div>
         ) : (
           <div className="space-y-3">
-            {sortedRequests.map((request: any) => {
+            {sortedRequests.map((request) => {
               const status = formatStatus(request.status);
               
               return (
@@ -387,4 +386,4 @@ export function TimeOffList() {
       </CardContent>
     </Card>
   );
-}
+} 

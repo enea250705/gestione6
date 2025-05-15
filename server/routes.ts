@@ -1,11 +1,4 @@
-/**
- * Routes for the WorkforceManager API
- * 
- * Note: Type assertions (as any) are used in this file to bypass TypeScript errors
- * related to Express middleware and route handlers. This is a temporary solution
- * until we can properly fix the type definitions.
- */
-import type { Express, Request, Response, NextFunction, RequestHandler } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import session from "express-session";
@@ -242,17 +235,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       secret: process.env.SESSION_SECRET || "keyboard cat",
       resave: false,
       saveUninitialized: false,
-      store: storage.sessionStore as any,
+      store: storage.sessionStore,
       cookie: {
         maxAge: 86400000, // 24 ore
         secure: false
       }
-    }) as any
+    })
   );
   
   // Setup passport for authentication
-  app.use(passport.initialize() as any);
-  app.use(passport.session() as any);
+  app.use(passport.initialize());
+  app.use(passport.session());
   
   // Configure passport local strategy
   passport.use(
@@ -264,7 +257,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return done(null, false, { message: "Incorrect username" });
         }
         
-        if (user.password !== password) {
+        // Use type assertion since we know the database user has a password field
+        // even though it's not in the TypeScript interface
+        if ((user as any).password !== password) {
           return done(null, false, { message: "Incorrect password" });
         }
         
@@ -295,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Middleware to check if user is authenticated
-  const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+  const isAuthenticated = (req: Request, res: Response, next: Function) => {
     if (req.isAuthenticated()) {
       return next();
     }
@@ -303,7 +298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
   
   // Middleware to check if user is admin
-  const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+  const isAdmin = (req: Request, res: Response, next: Function) => {
     if (req.isAuthenticated() && req.user && (req.user as any).role === "admin") {
       return next();
     }
@@ -595,7 +590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSchedules = await storage.getAllSchedules();
       
       // Identifica schedule con date in conflitto (sovrapposte)
-      const conflictingSchedules = allSchedules.filter((s: any) => 
+      const conflictingSchedules = allSchedules.filter(s => 
         (s.startDate === startDate && s.endDate === endDate) || 
         (s.startDate <= startDate && s.endDate >= startDate) ||
         (s.startDate <= endDate && s.endDate >= endDate)
@@ -605,7 +600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔍 Analisi date: Rilevati ${conflictingSchedules.length} schedule con date in conflitto`);
       if (conflictingSchedules.length > 0) {
         console.log("📊 Schedule in conflitto:", 
-          conflictingSchedules.map((s: any) => ({ 
+          conflictingSchedules.map(s => ({ 
             id: s.id, 
             periodo: `${s.startDate} al ${s.endDate}`,
             pubblicato: s.isPublished 
@@ -725,6 +720,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all users
       const users = await storage.getAllUsers();
       
+      // Import email service
+      const { sendScheduleNotification } = await import('./services/nodemailer-service.js');
+      
       // Create notifications and send emails to all users
       for (const user of users) {
         if (user.isActive && user.role !== 'admin') { // Invia solo ai dipendenti, non agli admin
@@ -755,7 +753,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`🔍 Recuperati ${userShifts.length} turni per ${user.name}`);
             
             // Invia email con i dettagli dei turni inclusi
-            const { sendScheduleNotification } = await import('./services/nodemailer-service.js');
             await sendScheduleNotification(user, schedule.startDate, schedule.endDate, userShifts);
             console.log(`📧 Email di notifica turno inviata a ${user.name} (${user.email}) con ${userShifts.length} turni inclusi`);
           } catch (emailError) {
@@ -938,7 +935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let approvedTimeOffs: any[] = [];
       if (settings.respectTimeOffRequests) {
         approvedTimeOffs = (await storage.getAllTimeOffRequests()).filter(
-          (request: any) => 
+          request => 
             request.status === "approved" &&
             userIds.includes(request.userId) &&
             // Controllo sovrapposizione date
@@ -989,7 +986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let approvedTimeOffs: any[] = [];
       if (settings.respectTimeOffRequests) {
         approvedTimeOffs = (await storage.getAllTimeOffRequests()).filter(
-          (request: any) => 
+          request => 
             request.status === "approved" &&
             userIds.includes(request.userId) &&
             // Controllo sovrapposizione date
@@ -1081,7 +1078,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const request = await storage.createTimeOffRequest(requestData);
       
       // Notify admins about the new request
-      const admins = (await storage.getAllUsers()).filter((user: any) => user.role === "admin" && user.isActive);
+      const admins = (await storage.getAllUsers()).filter(user => user.role === "admin" && user.isActive);
       
       for (const admin of admins) {
         const notification = await storage.createNotification({
@@ -1185,7 +1182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Trova tutti gli schedules attivi che coprono il periodo della richiesta
       const allSchedules = await storage.getAllSchedules();
-      const overlappingSchedules = allSchedules.filter((schedule: any) => {
+      const overlappingSchedules = allSchedules.filter(schedule => {
         const scheduleStart = new Date(schedule.startDate);
         const scheduleEnd = new Date(schedule.endDate);
         const requestStart = new Date(request.startDate);
@@ -1222,7 +1219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Verifica se esistono già turni per questo utente e giorno
           const existingShifts = await storage.getShifts(schedule.id);
           const userDayShifts = existingShifts.filter(
-            (s: any) => s.userId === request.userId && s.day === dayName
+            s => s.userId === request.userId && s.day === dayName
           );
           
           // Se l'utente ha già turni in questo giorno, aggiorna il tipo invece di creare nuovi
@@ -1301,7 +1298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user && user.email) {
         try {
           // Import del servizio email
-          const { sendTimeOffRejectionNotification } = await import('./services/nodemailer-service.js');
+          const { sendTimeOffRejectionNotification } = await import('./services/email-service.js');
           
           // Invia email di notifica
           await sendTimeOffRejectionNotification(user, request.type, request.startDate, request.endDate);
@@ -1602,6 +1599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const messageId = parseInt(req.params.id);
       const message = await storage.getMessage(messageId);
+      
       if (!message) {
         return res.status(404).json({ message: "Message not found" });
       }

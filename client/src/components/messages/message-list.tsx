@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { MessageComposer } from "./message-composer";
-import { Message } from "@shared/schema";
+import { Message } from "@/types/schema";
 
 export function MessageList() {
   const { toast } = useToast();
@@ -265,7 +265,7 @@ export function MessageList() {
                 </CardHeader>
                 <CardContent>
                   <div className="prose dark:prose-invert prose-sm max-w-none">
-                    {selectedMessage.content.split('\n').map((line, index) => (
+                    {selectedMessage.content.split('\n').map((line: string, index: number) => (
                       <p key={index}>{line}</p>
                     ))}
                   </div>

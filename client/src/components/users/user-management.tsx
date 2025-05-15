@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { UserForm } from "./user-form";
 import { BulkUsersForm } from "./bulk-users-form";
-import { User } from "@shared/schema";
+import { User } from "@/types/schema";
 import { Loader2, Search, Edit, UserPlus, CheckCircle, XCircle, Upload, Users, MoreVertical, Key } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedContainer } from "@/components/ui/animated-container";
@@ -86,7 +86,7 @@ export function UserManagement() {
   const filteredUsers = users
     .filter((user: User) => {
       const nameMatch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       user.email.toLowerCase().includes(searchTerm.toLowerCase());
+                       (user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false);
       const roleMatch = roleFilter === "all" || user.role === roleFilter;
       const statusMatch = statusFilter === "all" || 
                          (statusFilter === "active" && user.isActive) ||

@@ -7,7 +7,7 @@ import {
   type Document, type InsertDocument,
   type Notification, type InsertNotification,
   type Message, type InsertMessage
-} from "@shared/schema";
+} from "./shared/schema.js";
 
 export interface IStorage {
   // User management
@@ -101,10 +101,20 @@ export class MemStorage implements IStorage {
     // Creazione utente amministratore predefinito
     this.createUser({
       username: "admin",
-      password: "davittorino2025@",
-      name: "Admin",
-      email: "admin@davittorino.it",
+      password: "admin123",
+      name: "Admin User",
+      email: "admin@staffsync.com",
       role: "admin",
+      isActive: true,
+    });
+
+    // Creazione di un utente dipendente di esempio
+    this.createUser({
+      username: "employee",
+      password: "employee123",
+      name: "Dipendente Demo",
+      email: "dipendente@staffsync.com",
+      role: "employee",
       isActive: true,
     });
   }
@@ -123,9 +133,15 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userCurrentId++;
     const now = new Date();
-    const user: User = { ...insertUser, id, lastLogin: now };
-    this.users.set(id, user);
-    return user;
+    const memUser: User = { 
+      ...insertUser, 
+      id, 
+      role: insertUser.role || 'employee',
+      isActive: insertUser.isActive ?? true,
+      lastLogin: now 
+    };
+    this.users.set(id, memUser);
+    return memUser;
   }
   
   async updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined> {
@@ -143,16 +159,15 @@ export class MemStorage implements IStorage {
   
   // Schedule management
   async createSchedule(scheduleData: InsertSchedule): Promise<Schedule> {
-    const id = this.scheduleCurrentId++;
     const now = new Date();
-    const schedule: Schedule = {
+    const newSchedule = {
       ...scheduleData,
-      id,
+      isPublished: scheduleData.isPublished ?? false,
       publishedAt: null,
       updatedAt: now
     };
     
-    this.schedules.set(id, schedule);
+    const [schedule] = await db.insert(schedules).values(newSchedule as any).returning();
     return schedule;
   }
   
@@ -191,10 +206,14 @@ export class MemStorage implements IStorage {
   
   // Shift management
   async createShift(shiftData: InsertShift): Promise<Shift> {
-    const id = this.shiftCurrentId++;
-    const shift: Shift = { ...shiftData, id };
+    const completeShiftData = {
+      ...shiftData,
+      type: shiftData.type || 'work',
+      notes: shiftData.notes ?? null,
+      area: shiftData.area ?? null
+    };
     
-    this.shifts.set(id, shift);
+    const [shift] = await db.insert(shifts).values(completeShiftData as any).returning();
     return shift;
   }
   
@@ -282,15 +301,18 @@ export class MemStorage implements IStorage {
   
   // TimeOff requests
   async createTimeOffRequest(requestData: InsertTimeOffRequest): Promise<TimeOffRequest> {
-    const id = this.timeOffRequestCurrentId++;
     const now = new Date();
-    const request: TimeOffRequest = {
+    const newRequest = {
       ...requestData,
-      id,
-      approvedBy: null,
+      status: requestData.status || 'pending',
+      reason: requestData.reason ?? null,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      approvedBy: null
     };
+    
+    const id = this.timeOffRequestCurrentId++;
+    const request: TimeOffRequest = { ...newRequest, id };
     
     this.timeOffRequests.set(id, request);
     return request;
@@ -367,15 +389,33 @@ export class MemStorage implements IStorage {
   }
   
   async getUserDocuments(userId: number, type?: string): Promise<Document[]> {
-    return Array.from(this.documents.values()).filter(
-      (document) => document.userId === userId && (!type || document.type === type)
-    );
+    if (type) {
+      return await db
+        .select()
+        .from(documents)
+        .where(and(
+          eq(documents.userId, userId),
+          eq(documents.type, type)
+        ));
+    } else {
+      return await db
+        .select()
+        .from(documents)
+        .where(eq(documents.userId, userId));
+    }
   }
   
   async getAllDocuments(type?: string): Promise<Document[]> {
-    return Array.from(this.documents.values()).filter(
-      (document) => !type || document.type === type
-    );
+    if (type) {
+      return await db
+        .select()
+        .from(documents)
+        .where(eq(documents.type, type));
+    } else {
+      return await db
+        .select()
+        .from(documents);
+    }
   }
   
   async deleteDocument(id: number): Promise<boolean> {
@@ -384,13 +424,16 @@ export class MemStorage implements IStorage {
   
   // Notifications
   async createNotification(notificationData: InsertNotification): Promise<Notification> {
-    const id = this.notificationCurrentId++;
     const now = new Date();
-    const notification: Notification = {
+    const newNotification = {
       ...notificationData,
-      id,
+      data: notificationData.data ?? {},
+      isRead: notificationData.isRead ?? false,
       createdAt: now
     };
+    
+    const id = this.notificationCurrentId++;
+    const notification: Notification = { ...newNotification, id };
     
     this.notifications.set(id, notification);
     return notification;
@@ -453,15 +496,17 @@ export class MemStorage implements IStorage {
   }
   
   async getUserReceivedMessages(userId: number): Promise<Message[]> {
-    return Array.from(this.messages.values())
-      .filter(message => message.toUserId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return await db
+      .select()
+      .from(messages)
+      .where(eq(messages.toUserId as any, userId));
   }
   
   async getUserSentMessages(userId: number): Promise<Message[]> {
-    return Array.from(this.messages.values())
-      .filter(message => message.fromUserId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return await db
+      .select()
+      .from(messages)
+      .where(eq(messages.fromUserId as any, userId));
   }
   
   async markMessageAsRead(id: number): Promise<Message | undefined> {
@@ -486,10 +531,10 @@ export class MemStorage implements IStorage {
 }
 
 import { eq, and, lte, gte } from "drizzle-orm";
-import { db } from "./db";
+import { db } from "./db.js";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { pool } from "./db";
+import { pool } from "./db.js";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -501,7 +546,7 @@ export class DatabaseStorage implements IStorage {
   constructor() {
     // Create PostgreSQL session store
     this.sessionStore = new PostgresSessionStore({ 
-      pool, 
+      pool: pool as any, // Type assertion to fix compatibility issue
       createTableIfMissing: true 
     });
     
@@ -515,12 +560,27 @@ export class DatabaseStorage implements IStorage {
     if (!adminExists) {
       await this.createUser({
         username: "admin",
-        password: "davittorino2025@",
-        name: "Admin",
-        email: "admin@davittorino.it",
+        password: "admin123",
+        name: "Amministratore",
+        email: "admin@azienda.it",
         role: "admin",
         position: null,
         phone: null,
+        isActive: true
+      });
+    }
+    
+    // Check if employee exists
+    const employeeExists = await this.getUserByUsername("employee");
+    if (!employeeExists) {
+      await this.createUser({
+        username: "employee",
+        password: "employee123",
+        name: "Dipendente Demo",
+        email: "dipendente@azienda.it",
+        role: "employee",
+        position: "Cameriere",
+        phone: "+39123456789",
         isActive: true
       });
     }
@@ -540,10 +600,12 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const newUser = {
       ...insertUser,
+      role: insertUser.role || 'employee',
+      isActive: insertUser.isActive ?? true,
       lastLogin: now
     };
     
-    const [user] = await db.insert(users).values(newUser).returning();
+    const [user] = await db.insert(users).values(newUser as any).returning();
     return user;
   }
   
@@ -564,12 +626,12 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const newSchedule = {
       ...scheduleData,
-      isPublished: false,
+      isPublished: scheduleData.isPublished ?? false,
       publishedAt: null,
       updatedAt: now
     };
     
-    const [schedule] = await db.insert(schedules).values(newSchedule).returning();
+    const [schedule] = await db.insert(schedules).values(newSchedule as any).returning();
     return schedule;
   }
   
@@ -625,7 +687,14 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createShift(shiftData: InsertShift): Promise<Shift> {
-    const [shift] = await db.insert(shifts).values(shiftData).returning();
+    const completeShiftData = {
+      ...shiftData,
+      type: shiftData.type || 'work',
+      notes: shiftData.notes ?? null,
+      area: shiftData.area ?? null
+    };
+    
+    const [shift] = await db.insert(shifts).values(completeShiftData as any).returning();
     return shift;
   }
   
@@ -727,12 +796,14 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const newRequest = {
       ...requestData,
+      status: requestData.status || 'pending',
+      reason: requestData.reason ?? null,
       createdAt: now,
       updatedAt: now,
       approvedBy: null
     };
     
-    const [request] = await db.insert(timeOffRequests).values(newRequest).returning();
+    const [request] = await db.insert(timeOffRequests).values(newRequest as any).returning();
     return request;
   }
   
@@ -820,26 +891,33 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getUserDocuments(userId: number, type?: string): Promise<Document[]> {
-    let query = db
-      .select()
-      .from(documents)
-      .where(eq(documents.userId, userId));
-    
     if (type) {
-      query = query.where(eq(documents.type, type));
+      return await db
+        .select()
+        .from(documents)
+        .where(and(
+          eq(documents.userId, userId),
+          eq(documents.type, type)
+        ));
+    } else {
+      return await db
+        .select()
+        .from(documents)
+        .where(eq(documents.userId, userId));
     }
-    
-    return await query;
   }
   
   async getAllDocuments(type?: string): Promise<Document[]> {
-    let query = db.select().from(documents);
-    
     if (type) {
-      query = query.where(eq(documents.type, type));
+      return await db
+        .select()
+        .from(documents)
+        .where(eq(documents.type, type));
+    } else {
+      return await db
+        .select()
+        .from(documents);
     }
-    
-    return await query;
   }
   
   async deleteDocument(id: number): Promise<boolean> {
@@ -854,15 +932,12 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const newNotification = {
       ...notificationData,
-      createdAt: now,
-      isRead: false
+      data: notificationData.data ?? {},
+      isRead: notificationData.isRead ?? false,
+      createdAt: now
     };
     
-    const [notification] = await db
-      .insert(notifications)
-      .values(newNotification)
-      .returning();
-    
+    const [notification] = await db.insert(notifications).values(newNotification as any).returning();
     return notification;
   }
   
@@ -921,14 +996,14 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(messages)
-      .where(eq(messages.receiverId, userId));
+      .where(eq(messages.toUserId as any, userId));
   }
   
   async getUserSentMessages(userId: number): Promise<Message[]> {
     return await db
       .select()
       .from(messages)
-      .where(eq(messages.senderId, userId));
+      .where(eq(messages.fromUserId as any, userId));
   }
   
   async markMessageAsRead(id: number): Promise<Message | undefined> {

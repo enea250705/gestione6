@@ -1,7 +1,10 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
-import { it } from "date-fns/locale";
+import format from "date-fns/format/index.js";
+import formatDistanceToNow from "date-fns/formatDistanceToNow/index.js";
+import isToday from "date-fns/isToday/index.js";
+import isYesterday from "date-fns/isYesterday/index.js";
+import it from "date-fns/locale/it/index.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,6 +18,39 @@ interface Activity {
   icon: string;
 }
 
+interface User {
+  id: number;
+  name: string;
+  role?: string;
+  lastLogin: string;
+}
+
+interface Schedule {
+  id: number;
+  startDate: string;
+  endDate: string;
+  isPublished: boolean;
+  publishedAt?: string;
+}
+
+interface TimeOffRequest {
+  id: number;
+  userId: number;
+  type: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  approvedBy?: number;
+  updatedAt: string;
+  createdAt: string;
+}
+
+interface Document {
+  id: number;
+  type: string;
+  uploadedAt: string;
+}
+
 export function RecentActivities() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -22,21 +58,21 @@ export function RecentActivities() {
   const maxActivities = showAll ? 50 : 4;
   
   // Carica i dati per le attività
-  const { data: schedules = [] } = useQuery({
+  const { data: schedules = [] } = useQuery<Schedule[]>({
     queryKey: ["/api/schedules/all"],
     enabled: isAdmin,
   });
   
-  const { data: timeOffRequests = [] } = useQuery({
+  const { data: timeOffRequests = [] } = useQuery<TimeOffRequest[]>({
     queryKey: ["/api/time-off-requests"],
   });
   
-  const { data: users = [] } = useQuery({
+  const { data: users = [] } = useQuery<User[]>({
     queryKey: ["/api/users"],
     enabled: isAdmin,
   });
   
-  const { data: documents = [] } = useQuery({
+  const { data: documents = [] } = useQuery<Document[]>({
     queryKey: ["/api/documents"],
   });
   
@@ -53,7 +89,7 @@ export function RecentActivities() {
   
   // Funzione per ottenere il nome di un utente
   const getUserName = (userId: number) => {
-    const user = users.find((u: any) => u.id === userId);
+    const user = users.find((u) => u.id === userId);
     return user ? user.name : `Utente ${userId}`;
   };
   
@@ -62,7 +98,7 @@ export function RecentActivities() {
     const result: Activity[] = [];
     
     // Schedules pubblicati
-    schedules.filter((s: any) => s.isPublished).forEach((schedule: any) => {
+    schedules.filter((s) => s.isPublished).forEach((schedule) => {
       const startDateFormatted = format(new Date(schedule.startDate), "d MMMM", { locale: it });
       const endDateFormatted = format(new Date(schedule.endDate), "d MMMM", { locale: it });
       
@@ -71,15 +107,15 @@ export function RecentActivities() {
         type: "schedule_published",
         title: "Turno settimanale pubblicato",
         details: `${startDateFormatted} - ${endDateFormatted}`,
-        timestamp: new Date(schedule.publishedAt),
+        timestamp: new Date(schedule.publishedAt || schedule.startDate),
         icon: "event_available"
       });
     });
     
     // Richieste approvate/rifiutate
     timeOffRequests
-      .filter((r: any) => r.status !== "pending" && r.approvedBy)
-      .forEach((request: any) => {
+      .filter((r) => r.status !== "pending" && r.approvedBy)
+      .forEach((request) => {
         const isApproved = request.status === "approved";
         const userName = getUserName(request.userId);
         const startDateFormatted = format(new Date(request.startDate), "d MMMM", { locale: it });
@@ -100,7 +136,7 @@ export function RecentActivities() {
     
     // Nuovi utenti
     if (isAdmin) {
-      users.forEach((user: any) => {
+      users.forEach((user) => {
         // Considera solo utenti registrati recentemente (negli ultimi 30 giorni)
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -121,7 +157,7 @@ export function RecentActivities() {
     // Documenti caricati
     if (isAdmin) {
       // Raggruppa documenti caricati lo stesso giorno
-      const documentsByDay = documents.reduce((acc: any, doc: any) => {
+      const documentsByDay = documents.reduce<Record<string, Document[]>>((acc, doc) => {
         const date = new Date(doc.uploadedAt).toDateString();
         if (!acc[date]) {
           acc[date] = [];
@@ -130,11 +166,11 @@ export function RecentActivities() {
         return acc;
       }, {});
       
-      Object.entries(documentsByDay).forEach(([date, docs]: [string, any]) => {
+      Object.entries(documentsByDay).forEach(([date, docs]) => {
         let details = "";
         const typeMap: Record<string, number> = {};
         
-        docs.forEach((doc: any) => {
+        docs.forEach((doc) => {
           const type = doc.type === "payslip" ? "busta paga" : "CUD";
           typeMap[type] = (typeMap[type] || 0) + 1;
         });
@@ -159,7 +195,7 @@ export function RecentActivities() {
     
     // Ordina per data (più recenti prima)
     return result.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [schedules, timeOffRequests, users, documents, isAdmin]);
+  }, [schedules, timeOffRequests, users, documents, isAdmin, getUserName]);
   
   // Filtra solo le attività pertinenti in base al ruolo
   const filteredActivities = useMemo(() => {

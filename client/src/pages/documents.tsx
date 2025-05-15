@@ -62,7 +62,7 @@ export default function Documents() {
                 </TabsContent>
                 
                 <TabsContent value="upload" className="space-y-6 overflow-x-auto">
-                  <DocumentUpload users={users} />
+                  <DocumentUpload users={users as any[]} />
                 </TabsContent>
               </Tabs>
             ) : (

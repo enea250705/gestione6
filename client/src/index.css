@@ -84,7 +84,7 @@
 
 @layer base {
   * {
-    @apply border-input;
+    @apply border-border;
   }
 
   body {

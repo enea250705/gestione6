@@ -1,5 +1,5 @@
 import { MailService } from '@sendgrid/mail';
-import { User } from '@shared/schema';
+import { User } from '../shared/schema.js';
 
 // Modalità di sviluppo (non invia email effettivamente ma le mostra in console)
 // Imposta su false per inviare email reali con SendGrid (richiede SENDGRID_API_KEY)
