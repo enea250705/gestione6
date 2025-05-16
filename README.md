@@ -1,5 +1,7 @@
 # Workforce Manager
 
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/enea250705/gestione6)
+
 A full-stack application for workforce management with a Node.js/Express backend and Next.js frontend.
 
 ## Project Structure

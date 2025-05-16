@@ -1,0 +1,41 @@
+tasks:
+  - name: Setup Database
+    init: |
+      mkdir -p .postgres
+      initdb -D .postgres
+      pg_ctl -D .postgres start
+      psql -c "CREATE USER gitpod WITH PASSWORD 'gitpod';"
+      psql -c "CREATE DATABASE workforce;"
+      psql -c "GRANT ALL PRIVILEGES ON DATABASE workforce TO gitpod;"
+      cp .env.gitpod .env
+      
+  - name: Install & Start
+    init: |
+      npm install
+      cd client && npm install
+      cd ..
+    command: npm run dev
+    
+  - name: Frontend Terminal
+    command: cd client && echo "Run 'npm run dev' to start the frontend"
+
+ports:
+  - port: 3000
+    onOpen: open-preview
+    visibility: public
+  - port: 5000
+    onOpen: ignore
+    visibility: public
+  - port: 5432
+    onOpen: ignore
+    visibility: private
+
+github:
+  prebuilds:
+    master: true
+    branches: true
+    pullRequests: true
+    pullRequestsFromForks: true
+    addCheck: true
+    addComment: true
+    addBadge: true 
