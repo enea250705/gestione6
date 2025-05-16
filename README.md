@@ -1,62 +1,6 @@
 # Workforce Manager
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/enea250705/gestione6)
-
-A full-stack application for workforce management with a Node.js/Express backend and Next.js frontend.
-
-## Project Structure
-
-- `/server`: Backend code (Express.js, Node.js)
-- `/client`: Frontend code (Next.js)
-- `/shared`: Shared code between frontend and backend
-
-## Setup Instructions for Replit
-
-### 1. Import from GitHub
-
-1. Create a new Repl
-2. Choose "Import from GitHub"
-3. Enter the repository URL: `https://github.com/enea250705/gestione6.git`
-
-### 2. Configure Environment Variables
-
-Add the following secrets in the Replit Secrets tab:
-
-- `DATABASE_URL`: Your database connection string
-- `NODE_ENV`: `production`
-- `PORT`: `3000`
-- `FRONTEND_URL`: The URL of your frontend deployment
-
-### 3. Install Dependencies
-
-Run the following commands:
-
-```bash
-npm install
-cd client && npm install
-```
-
-### 4. Configure .replit file
-
-Create a `.replit` file with:
-
-```
-run = "npm run dev"
-```
-
-### 5. Deployment
-
-For production:
-
-- Backend: Deploy to Render using the provided `render.yaml` configuration
-- Frontend: Deploy to Vercel using the configuration in `client/vercel.json`
-
-## Local Development
-
-1. Clone the repository
-2. Install dependencies: `npm install && cd client && npm install`
-3. Create `.env` file with required environment variables
-4. Run the development server: `npm run dev`
+A comprehensive workforce management system for scheduling, time-off requests, and employee management.
 
 ## Deployment Instructions
 

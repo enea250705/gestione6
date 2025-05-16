@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { User } from '../shared/schema.js';
+import { User } from '@shared/schema';
 
 // Modalità di sviluppo (non invia email effettivamente ma le mostra in console)
 // Imposta su false per inviare email reali con Nodemailer
@@ -623,7 +623,6 @@ export async function sendTimeOffRejectionNotification(user: User, type: string,
   
   return result;
 }
-
 /**
  * Invia una notifica all'amministratore quando un dipendente fa una richiesta di ferie/permessi
  */

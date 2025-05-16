@@ -41,20 +41,6 @@ const timeOffSchema = z.object({
   reason: z.string().optional(),
 });
 
-// Define TimeOffRequest as a type interface
-interface TimeOffRequest {
-  id: number;
-  userId: number;
-  type: string;
-  status: string;
-  startDate: string;
-  endDate: string;
-  duration: string;
-  reason?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export function TimeOffRequest() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -259,13 +245,13 @@ export function TimeOffRequest() {
 }
 
 export function TimeOffList() {
-  const { data: timeOffRequests = [], isLoading } = useQuery<TimeOffRequest[]>({
+  const { data: timeOffRequests = [], isLoading } = useQuery({
     queryKey: ["/api/time-off-requests"],
   });
   
   // Sort requests by date (newest first)
   const sortedRequests = [...timeOffRequests].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   
   // Format request type

@@ -1,60 +1,75 @@
-"use client"
-
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { createContext, useState, useEffect, ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface User {
   id: number;
+  username: string;
   name: string;
   email: string;
   role: string;
+  isActive: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
-  error: Error | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  isLoading: boolean;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
+  login: async () => {},
+  logout: async () => {},
+});
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
-  
-  // Fetch current user
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["/api/auth/me"],
-    retry: false,
-  });
-  
+  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  // Check if user is already logged in
   useEffect(() => {
-    if (data) {
-      setUser(data as User);
+    async function checkAuth() {
+      try {
+        const response = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
+        const data = await response.json();
+        
+        if (data.user) {
+          setUser(data.user);
+        }
+      } catch (error) {
+        console.error("Failed to check authentication:", error);
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }, [data]);
+
+    checkAuth();
+  }, []);
 
   // Login function
-  const login = async (email: string, password: string) => {
+  const login = async (username: string, password: string) => {
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-      });
+      const response = await apiRequest("POST", "/api/auth/login", { username, password });
+      const data = await response.json();
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Login failed");
+      if (data.user) {
+        setUser(data.user);
+        return;
       }
       
-      const userData = await response.json();
-      setUser(userData);
+      throw new Error("Login failed");
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -64,35 +79,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Logout function
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
+      await apiRequest("POST", "/api/auth/logout", {});
       setUser(null);
+      
+      // Clear all queries from the cache on logout
+      queryClient.clear();
     } catch (error) {
       console.error("Logout error:", error);
-      throw error;
     }
   };
 
-  return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isLoading, 
-      error, 
-      login, 
-      logout, 
-      isAuthenticated: !!user 
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
+  const value = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    logout,
+  };
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

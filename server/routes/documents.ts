@@ -1,26 +1,7 @@
 import { Router, Request, Response } from "express";
-import { storage } from "../storage.js";
+import { storage } from "../storage";
 import { z } from "zod";
-
-// Define the schema locally if @shared/schema is not available
-const insertDocumentSchema = z.object({
-  type: z.enum(["payslip", "tax_document"]),
-  userId: z.number().int().positive(),
-  period: z.string().min(1),
-  filename: z.string().min(1),
-  fileData: z.string(),
-  uploadedBy: z.number().int().positive(),
-});
-
-// Extend Express Request to include user properties
-declare global {
-  namespace Express {
-    interface User {
-      id: number;
-      role: string;
-    }
-  }
-}
+import { insertDocumentSchema } from "@shared/schema";
 
 const router = Router();
 
@@ -81,7 +62,7 @@ router.post("/", isAdmin, async (req: Request, res: Response) => {
     if (user && user.isActive && user.email) {
       try {
         // Import email service
-        const { sendDocumentNotification } = await import('../services/nodemailer-service.js');
+        const { sendDocumentNotification } = await import('../../server/services/nodemailer-service');
         
         // Invia email di notifica all'utente
         await sendDocumentNotification(user, type, period);

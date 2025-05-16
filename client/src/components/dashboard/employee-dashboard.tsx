@@ -5,43 +5,34 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatHours, calculateTotalWorkHours, convertToHours } from "@/lib/utils";
 import { downloadPdf, generatePayslipFilename, generateTaxDocFilename } from "@/lib/pdf-utils";
 import { Link } from "wouter";
-import { User, Shift, TimeOffRequest, Document } from "@/types/schema";
-
-// Define types for our data structures
-interface Schedule {
-  id: number;
-  startDate: string;
-  endDate: string;
-  isPublished: boolean;
-}
 
 export function EmployeeDashboard() {
-  const { user } = useAuth() as { user: User | null };
+  const { user } = useAuth();
   
-  const { data: mySchedule = {} as Schedule } = useQuery<Schedule>({
+  const { data: mySchedule } = useQuery({
     queryKey: ["/api/schedules"],
   });
   
-  const { data: myShifts = [] } = useQuery<Shift[]>({
+  const { data: myShifts = [] } = useQuery({
     queryKey: [`/api/schedules/${mySchedule?.id}/shifts`],
     enabled: !!mySchedule?.id,
   });
   
-  const { data: myTimeOffRequests = [] } = useQuery<TimeOffRequest[]>({
+  const { data: myTimeOffRequests = [] } = useQuery({
     queryKey: ["/api/time-off-requests"],
   });
   
-  const { data: myDocuments = [] } = useQuery<Document[]>({
+  const { data: myDocuments = [] } = useQuery({
     queryKey: ["/api/documents"],
   });
   
   // Filter time off requests
-  const pendingRequests = myTimeOffRequests.filter((req) => req.status === "pending");
-  const approvedRequests = myTimeOffRequests.filter((req) => req.status === "approved");
+  const pendingRequests = myTimeOffRequests.filter((req: any) => req.status === "pending");
+  const approvedRequests = myTimeOffRequests.filter((req: any) => req.status === "approved");
   
   // Calcolo delle ore totali della settimana corrente utilizzando la funzione centralizzata
   const totalHoursThisWeek = calculateTotalWorkHours(
-    myShifts.filter((shift) => shift.type === "work")
+    myShifts.filter((shift: any) => shift.type === "work")
   );
   
   // Get day names for the week
@@ -51,13 +42,13 @@ export function EmployeeDashboard() {
   };
   
   // Group shifts by day and remove duplicates based on startTime-endTime combination
-  const shiftsByDay = myShifts.reduce<Record<string, Shift[]>>((acc, shift) => {
+  const shiftsByDay = myShifts.reduce((acc: any, shift: any) => {
     if (!acc[shift.day]) {
       acc[shift.day] = [];
     }
     
     // Check if this exact time slot already exists for this day to avoid duplicates
-    const existingShiftIndex = acc[shift.day].findIndex((s: Shift) => 
+    const existingShiftIndex = acc[shift.day].findIndex((s: any) => 
       s.startTime === shift.startTime && 
       s.endTime === shift.endTime && 
       s.type === shift.type
@@ -73,7 +64,7 @@ export function EmployeeDashboard() {
   
   // Mostra tutti i giorni della settimana, non solo i primi due
   const upcomingShifts = Object.entries(shiftsByDay)
-    .map(([day, shifts]) => ({ day, shifts }))
+    .map(([day, shifts]) => ({ day, shifts: shifts as any[] }))
     // Ordina i giorni secondo l'ordine corretto della settimana (da Lunedì a Domenica)
     .sort((a, b) => {
       const dayOrder = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"];
@@ -82,24 +73,24 @@ export function EmployeeDashboard() {
   
   // Get the number of working days (solo giorni con turni di lavoro)
   const workingDays = Object.entries(shiftsByDay)
-    .filter(([_, shifts]) => 
-      shifts.some((shift) => shift.type === "work")
+    .filter(([_, shifts]: [string, any[]]) => 
+      shifts.some((shift: any) => shift.type === "work")
     ).length;
   
   // Get latest documents
   const latestPayslip = myDocuments
-    .filter((doc) => doc.type === "payslip")
-    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0];
+    .filter((doc: any) => doc.type === "payslip")
+    .sort((a: any, b: any) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0];
   
   const latestTaxDoc = myDocuments
-    .filter((doc) => doc.type === "tax_document")
-    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0];
+    .filter((doc: any) => doc.type === "tax_document")
+    .sort((a: any, b: any) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0];
     
   // Funzioni per il download dei documenti
   const handleDownloadPayslip = () => {
     if (!latestPayslip) return;
     downloadPdf(
-      generatePayslipFilename(latestPayslip.period, user?.name || user?.username || ""),
+      generatePayslipFilename(latestPayslip.period, user?.fullName || user?.username || ""),
       latestPayslip.fileData
     );
   };
@@ -107,7 +98,7 @@ export function EmployeeDashboard() {
   const handleDownloadTaxDoc = () => {
     if (!latestTaxDoc) return;
     downloadPdf(
-      generateTaxDocFilename(latestTaxDoc.period, user?.name || user?.username || ""),
+      generateTaxDocFilename(latestTaxDoc.period, user?.fullName || user?.username || ""),
       latestTaxDoc.fileData
     );
   };
@@ -129,7 +120,9 @@ export function EmployeeDashboard() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-gray-500 text-sm">Ore Programmate</p>
-                <p className="text-2xl font-medium">{formatHours(totalHoursThisWeek)}</p>
+                <p className="text-2xl font-medium">
+                  {formatHours(Math.round(totalHoursThisWeek * 100) / 100)}
+                </p>
               </div>
               <div className="bg-blue-100 p-2 rounded-lg">
                 <span className="material-icons text-primary">schedule</span>
@@ -193,7 +186,7 @@ export function EmployeeDashboard() {
             </div>
           ) : (
             <div className="space-y-4">
-              {upcomingShifts.map(({ day, shifts }: { day: string, shifts: Shift[] }) => (
+              {upcomingShifts.map(({ day, shifts }: any) => (
                 <div key={day} className="border rounded-lg p-3">
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="font-medium">
@@ -201,7 +194,7 @@ export function EmployeeDashboard() {
                       {day.charAt(0).toUpperCase() + day.slice(1)}
                     </h3>
                     <div className="text-xs text-gray-500 font-medium">
-                      {formatHours(calculateTotalWorkHours(shifts.filter((shift: any) => shift.type === "work")))}
+                      {formatHours(Math.round(calculateTotalWorkHours(shifts.filter((shift: any) => shift.type === "work")) * 100) / 100)}
                     </div>
                   </div>
                   
@@ -259,13 +252,10 @@ export function EmployeeDashboard() {
                                   </p>
                                   {/* Mostra tutte le aree coinvolte se diverse */}
                                   {(() => {
-                                    // Safely convert Set to array with proper typing
-                                    const areas = sortedWorkShifts
+                                    const uniqueAreas = [...new Set(sortedWorkShifts
                                       .filter(s => s.area)
                                       .map(s => s.area)
-                                      .filter((area): area is string => area !== undefined);
-                                    
-                                    const uniqueAreas = Array.from(new Set(areas));
+                                    )];
                                     
                                     if (uniqueAreas.length === 0) return null;
                                     
@@ -297,9 +287,9 @@ export function EmployeeDashboard() {
                         {/* Ferie */}
                         {vacationShifts.length > 0 && (
                           <div className="mb-3">
-                            {vacationShifts.map((shift: Shift) => (
+                            {vacationShifts.map((shift: any) => (
                               <div 
-                                key={shift.id || `vacation-${shift.day}-${shift.startTime}`}
+                                key={shift.id}
                                 className="p-2 mb-2 rounded-md bg-red-50 border border-red-100"
                               >
                                 <div className="flex justify-between items-center">
@@ -319,9 +309,9 @@ export function EmployeeDashboard() {
                         {/* Permessi */}
                         {leaveShifts.length > 0 && (
                           <div className="mb-3">
-                            {leaveShifts.map((shift: Shift) => (
+                            {leaveShifts.map((shift: any) => (
                               <div 
-                                key={shift.id || `leave-${shift.day}-${shift.startTime}`}
+                                key={shift.id}
                                 className="p-2 mb-2 rounded-md bg-yellow-50 border border-yellow-100"
                               >
                                 <div className="flex justify-between items-center">
@@ -366,7 +356,7 @@ export function EmployeeDashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {myTimeOffRequests.slice(0, 3).map((request: TimeOffRequest) => (
+                {myTimeOffRequests.slice(0, 3).map((request: any) => (
                   <div 
                     key={request.id}
                     className="border rounded-md p-3 flex justify-between items-center"
@@ -493,22 +483,6 @@ export function EmployeeDashboard() {
           </CardContent>
         </Card>
       </div>
-      
-      {/* Schedule Overview Notification */}
-      {mySchedule && mySchedule.isPublished && (
-        <Card className="bg-blue-50 border border-blue-200">
-          <CardContent className="p-4 flex items-start">
-            <span className="material-icons text-primary mr-3 mt-1">notifications</span>
-            <div>
-              <h3 className="font-medium mb-1">Orario Settimanale Pubblicato</h3>
-              <p className="text-sm text-gray-700">
-                Il tuo orario per la settimana {formatDate(mySchedule.startDate)} - {formatDate(mySchedule.endDate)} è stato pubblicato.
-                Visualizzalo nella sezione "I Miei Turni".
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

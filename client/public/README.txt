@@ -7,8 +7,3 @@ Per visualizzare correttamente il logo:
 Una volta aggiunto il logo, riavvia il server di sviluppo con:
 - cd client
 - npm run dev 
- 
- 
- 
- 
- 

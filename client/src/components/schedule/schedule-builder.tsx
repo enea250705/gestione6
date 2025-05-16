@@ -8,61 +8,13 @@ import { it } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { generateTimeSlots, formatHours } from "@/lib/utils";
-import { User } from "@/types/schema";
-
-// Define types for our data structures
-interface Shift {
-  id: number;
-  userId: number;
-  day: string;
-  startTime: string;
-  endTime: string;
-  type: string;
-  notes?: string;
-  area?: string;
-}
-
-interface TimeOffRequest {
-  id: number;
-  userId: number;
-  type: string;
-  status: string;
-  startDate: string;
-  endDate: string;
-  duration: string;
-}
-
-// Define interface for user day data
-interface UserDayData {
-  cells: Array<{
-    type: string;
-    shiftId: number | null;
-    isTimeOff?: boolean;
-    requestId?: number;
-  }>;
-  notes: string;
-  total: number;
-}
-
-// Define interface for grid data
-interface GridData {
-  [day: string]: {
-    [userId: number]: UserDayData;
-  };
-}
-
-interface ShiftBlock {
-  start: number;
-  end: number;
-  type: string;
-}
 
 type ScheduleBuilderProps = {
   scheduleId: number | null;
-  users: User[];
+  users: any[];
   startDate: Date;
   endDate: Date;
-  shifts: Shift[];
+  shifts: any[];
   isPublished: boolean;
   onPublish: () => void;
   onAutoGenerate: () => void;
@@ -85,7 +37,7 @@ export function ScheduleBuilder({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeDay, setActiveDay] = useState(0);
-  const [gridData, setGridData] = useState<GridData>({});
+  const [gridData, setGridData] = useState<any>({});
   const timeSlots = generateTimeSlots(4, 24);
   
   // Initialize days of the week
@@ -168,7 +120,7 @@ export function ScheduleBuilder({
   });
   
   // Fetch approved time-off requests
-  const { data: timeOffRequests = [] } = useQuery<TimeOffRequest[]>({
+  const { data: timeOffRequests = [] } = useQuery({
     queryKey: ["/api/time-off-requests"],
     select: (data: any) => data.filter((req: any) => req.status === "approved"),
   });
@@ -187,7 +139,7 @@ export function ScheduleBuilder({
       console.log("Rendering grid data with shifts:", shifts.length);
       isFirstRender.current = false;
       
-      const newGridData: GridData = {};
+      const newGridData: any = {};
     
       // Initialize empty grid for all users and time slots
       weekDays.forEach(day => {
@@ -416,49 +368,65 @@ export function ScheduleBuilder({
     const currentDay = weekDays[activeDay].name;
     const nextDay = weekDays[(activeDay + 1) % 7].name;
     
-    // Iterate through each user's schedule for the current day
-    if (gridData[currentDay]) {
-      for (const userIdStr in gridData[currentDay]) {
-        if (Object.prototype.hasOwnProperty.call(gridData[currentDay], userIdStr)) {
-          const userId = parseInt(userIdStr);
-          const userData = gridData[currentDay][userId];
-          
-          // Go through each cell and find continuous blocks of the same type
-          let i = 0;
-          while (i < userData.cells.length) {
-            const cell = userData.cells[i];
-            
-            // If this is a cell with a shift type
-            if (cell.type !== "") {
-              const shiftType = cell.type;
-              const startIndex = i;
-              
-              // Find the end of this continuous block
-              while (
-                i < userData.cells.length - 1 && 
-                userData.cells[i + 1].type === shiftType
-              ) {
-                i++;
-              }
-              
-              // Create a shift for this block
+    // Copy all shifts from current day to next day
+    Object.entries(gridData[currentDay]).forEach(([userId, userData]: [string, any]) => {
+      const userIdNum = parseInt(userId);
+      
+      // Find continuous blocks of cells with the same type
+      let currentBlock: { start: number; end: number; type: string } | null = null;
+      
+      userData.cells.forEach((cell: any, index: number) => {
+        if (cell.type !== "") {
+          if (!currentBlock || currentBlock.type !== cell.type) {
+            // If we had a previous block, save it
+            if (currentBlock) {
               createShiftMutation.mutate({
                 scheduleId,
-                userId,
+                userId: userIdNum,
                 day: nextDay,
-                startTime: timeSlots[startIndex],
-                endTime: timeSlots[i + 1], // End time is the next slot
-                type: shiftType,
+                startTime: timeSlots[currentBlock.start],
+                endTime: timeSlots[currentBlock.end],  // Rimuovo il +1 per evitare di aggiungere 30 minuti in più
+                type: currentBlock.type,
                 notes: userData.notes,
                 area: ""
               });
             }
-            
-            i++; // Move to the next cell
+            // Start a new block
+            currentBlock = { start: index, end: index, type: cell.type };
+          } else {
+            // Extend the current block
+            currentBlock.end = index;
           }
+        } else if (currentBlock) {
+          // End of a block
+          createShiftMutation.mutate({
+            scheduleId,
+            userId: userIdNum,
+            day: nextDay,
+            startTime: timeSlots[currentBlock.start],
+            endTime: timeSlots[currentBlock.end],  // Rimuovo il +1 per evitare di aggiungere 30 minuti in più
+            type: currentBlock.type,
+            notes: userData.notes,
+            area: ""
+          });
+          currentBlock = null;
         }
+      });
+      
+      // Don't forget the last block if it extends to the end
+      if (currentBlock) {
+        createShiftMutation.mutate({
+          scheduleId,
+          userId: userIdNum,
+          day: nextDay,
+          startTime: timeSlots[currentBlock.start],
+          endTime: timeSlots[currentBlock.end],  // Rimuovo il +1 per evitare di aggiungere 30 minuti in più
+          type: currentBlock.type,
+          notes: userData.notes,
+          area: ""
+        });
       }
-    }
+    });
     
     toast({
       title: "Giorno copiato",

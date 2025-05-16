@@ -1,7 +1,6 @@
-# Dependencies
+# Dependency directories
 node_modules/
-/.pnp
-.pnp.js
+jspm_packages/
 
 # Environment variables
 .env
@@ -9,14 +8,13 @@ node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+client/.env
 
 # Build outputs
-/dist/
-/build/
-/out/
-/.next/
-client/.next/
-client/build/
+dist/
+build/
+out/
+.next/
 client/dist/
 
 # Logs
@@ -25,6 +23,54 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+
+# Cache directories
+.npm
+.eslintcache
+.cache
+.parcel-cache
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directories
+coverage/
+.nyc_output
+
+# IDE / Editor directories
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+.history/
+
+# Temporary files
+tmp/
+temp/
+
+# Debug files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local Netlify folder
+.netlify
+
+# Misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Dependencies
+/.pnp
+.pnp.js
 
 # Testing
 /coverage

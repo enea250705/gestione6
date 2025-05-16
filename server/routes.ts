@@ -257,9 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return done(null, false, { message: "Incorrect username" });
         }
         
-        // Use type assertion since we know the database user has a password field
-        // even though it's not in the TypeScript interface
-        if ((user as any).password !== password) {
+        if (user.password !== password) {
           return done(null, false, { message: "Incorrect password" });
         }
         
